@@ -1,0 +1,117 @@
+## This file is a collection of codes used to produce certain plots using the main file.
+
+
+### This one finds the stationary solution and plots m as a function of h for different temperatures.
+field_list = np.linspace(-0.8, 0.8, 200)
+    for beta_0 in [1.1, 1.3, 1.6]:
+        exact = stationary(field_list, beta_0)
+        label = r'$\beta = $' + str(beta_0)
+        plt.plot(exact[:, 1], exact[:, 0], label=label)
+
+    plt.xlabel('field strength h')
+    plt.ylabel('magnetization m')
+    plt.title(r'stationary solution for $\beta > 1$')
+
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+
+    ### This one gives the plots as in folder nearlystat
+h_0 = 0.7
+    beta_0 = 0.85
+
+    field_list = np.linspace(-0.7, 0.7, 200)
+    exact = stationary(field_list, beta_0)
+    plt.plot(exact[:, 1], exact[:, 0], label='stationary')
+
+    for omega_0 in [3e-3, 3e-2, 1e-1]:
+        res = calc_m(h_0, omega_0, beta_0)
+        l = len(res[0])
+        h = h_0 * np.sin(omega_0 * res[0])
+        plt.plot(h[l//2:], res[1][l//2:], label=(r'$\omega_0 = $' + str(omega_0)))
+
+    plt.legend()
+    plt.xlabel('field strength h')
+    plt.ylabel('magnetization m')
+    plt.title(r'deviation from stationary solution for $\beta = $' + str(beta_0))
+    plt.tight_layout()
+    plt.show()
+
+    ### This one gives figures for diffrent beta at small omega
+h_0 = 0.05
+    omega_0 = 1e-3
+
+    for beta_0 in [1.1, 1.2, 1.21, 1.3, 1.5]:
+        res = calc_m(h_0, omega_0, beta_0)
+        l = len(res[0])
+        h = h_0 * np.sin(omega_0 * res[0])
+        plt.plot(h[l // 2:], res[1][l // 2:], label=(r'$\beta_0 = $' + str(beta_0)))
+
+    plt.legend()
+    plt.xlabel('field strength h')
+    plt.ylabel('magnetization m')
+    plt.title(r'magnetization for very small field oscillations at $\omega_0 = $' + str(omega_0))
+    plt.tight_layout()
+    plt.show()
+
+
+
+    ### This one creates 2 plots showing only the last 1.5 period of the calculations (period = largest period). On the left hand side, [h(t), m(t), delta_beta(t)] on the right [m(h)] showing the hysteresis
+epsilon = 0.1
+    h_0 = 0.8
+    beta = 1.2
+    omega_0 = 1e-3
+    omega_beta = 2e-3
+
+    m_of_t = calc_m(h_0, omega_0, beta, omega_beta, epsilon)
+    delta_beta = setup.sinus(m_of_t[0][:], omega_beta, epsilon)
+    h = setup.sinus(m_of_t[0][:], omega_0, h_0)
+
+    l = len(m_of_t[0])
+
+    fig, (axleft, axright) = plt.subplots(1, 2, figsize=(10, 4), layout='constrained')
+    title = (r"magnetization for $ \omega_0 = $" + str(omega_0) + r", $\omega_\beta = $" + str(omega_beta) +
+             r", $\beta = $" + str(beta) + r", $h_0 = $" + str(h_0) + r", $\epsilon = $" + str(epsilon))
+    fig.suptitle(title)
+
+    axleft.plot(m_of_t[0][9*l//12:], m_of_t[1][9*l//12:], label="m")
+    axleft.plot(m_of_t[0][9*l//12:], delta_beta[9*l//12:], alpha=0.6, label=r"$\Delta \beta$")
+    axleft.plot(m_of_t[0][9*l//12:], h[9*l//12:], alpha=0.6, label="h")
+    axleft.legend(loc='lower left')
+    axleft.set_xlabel("t")
+
+    res2 = calc_m(h_0, omega_0, beta, omega_beta, 0)
+
+    axright.plot(h[9*l//12:], m_of_t[1][9*l//12:], label=(r"$\epsilon = $" + str(epsilon)))
+    axright.plot(h[9*l//12:], res2[1][9*l//12:], alpha=0.5, label=r"$\epsilon = 0$")
+    axright.legend(loc="lower right")
+    axright.set_xlabel("h")
+    axright.set_ylabel("m")
+
+
+
+
+        J = np.empty((run_number, 2, len(time_arr)))
+
+    for run in range(run_number):
+        J[run] = Heat_split_up(spin_number, h, noise, time_arr, beta_0, omega_beta, epsilon, dt)
+
+    end_time = time.time()
+
+    J_1_avg = np.zeros_like(J[0][0][l // T_amt:])
+    J_1_variance = np.zeros_like(J_1_avg)
+    for i in range(len(J_1_avg)):
+        for run in range(run_number):
+            J_1_avg[i] += J[run][1][l // T_amt + i] - J[run][0][l // T_amt + i]
+            J_1_variance[i] += ((J[run][1][l // T_amt + i] - J[run][0][l // T_amt + i])/epsilon)**2
+        J_1_avg[i] /= (epsilon*run_number)
+        J_1_variance[i] = np.sqrt(J_1_variance[i]/run_number - J_1_avg[i]**2)
+
+    plt.plot(time_arr[(l // T_amt):], J_1_avg)
+    plt.fill_between(time_arr[(l // T_amt):], J_1_avg - J_1_variance,
+                     J_1_avg + J_1_variance, alpha=0.5)
+    plt.plot(time_arr[l // T_amt:], 50*np.cos(omega_beta*time_arr[l // T_amt:]))
+
+    C = beta_0/np.pi*dt * sum(J_1_avg * np.cos(omega_beta*time_arr[l // T_amt:]))
+    print(C)
