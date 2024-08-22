@@ -143,37 +143,68 @@ def RungeKutta_split(timestep, final_time, initial_0, initial_1, omega_0, h_0, b
 #%%
 
 ################################################################
+#%% Functions related to saving the data       ###############
+################################################################
+
+def write_expl_first_figure(omega_0, h_0, beta_0, omega_beta, m_init, dt, init_time):
+    file = open("fig_trans.txt", "w")
+    file.write("the data has shape (5,steps)\n"
+               "data[0] is the time array\n"
+               "all other rows are magnetizations\n"
+               "data[1]:beta_0 = "+str(beta_0[0]) +
+                "\n data[2]:beta_0 = " + str(beta_0[1]) +
+                "\n data[3]:beta_0 = " + str(beta_0[2]) +
+                "\n data[4]:beta_0 = " + str(beta_0[3]) +
+               "\n other variables are:"
+               "\n omega_0 = " + str(omega_0) +
+               "\n h_0 = " + str(h_0) +
+               "\n omega_beta = " + str(omega_beta) +
+               "\n m_init = " + str(m_init) +
+               "\n timestep = " + str(dt) +
+               "\n init_time = " + str(init_time)
+    )
+    file.close()
+
+################################################################
 #%% The calculations and the main        ###############
 ################################################################
 
-def first_hysteresis_figure():
+def first_hyst_fig():
     ### parameters ###
     #physical parameters
     omega_0 = 2e-2
     h_0 = 0.3
     beta_0 = [1.8, 2.1, 2.2, 2.5]
     m_init = 0 #initial value of magnetization
+    init_time = 1 #number of periods before measurement
+    measure_time = 1 #number of periods for measurement
 
     #calculation parameters
     dt = 5e-5 / omega_0  # A small amount with respect to omega (I will always use omega_beta << omega_0
-    t_final = 2 * np.pi * 2 / omega_0
+    t_final = (init_time + measure_time) * np.pi * 2 / omega_0
     step_number = int(t_final / dt)
-
-    result = np.empty((5,step_number // 2 +1)) # first one is time. Make sure to check the length
 
     for i in range(len(beta_0)):
         m_t = RungeKutta_simple(dt, t_final, m_init, omega_0, h_0, beta_0[i])
+        if i==0:
+            result = np.empty((5, len(m_t[0][(step_number * measure_time) // (init_time+measure_time):])))
+                            ## keeping only the measurement periods
         result[i+1] = m_t[1][step_number // 2:]
 
-    result[0] = m_t[0][step_number // 2:] - m_t[0][step_number // 2]
+    result[0] = (m_t[0][step_number // 2:] - m_t[0][(step_number * measure_time) // (init_time+measure_time)])
 
-    plt.plot(result[0], result[1])
-    plt.show()
+    # plt.plot(result[0], result[1])
+    # plt.show()
+
+    np.save("fig_trans.npy", result)
+
+    write_expl_first_figure(omega_0, h_0, beta_0, np.nan, m_init, dt, 1)
+
 
 
 
 def main():
-    first_hysteresis_figure()
+    first_hyst_fig()
 
 
 
