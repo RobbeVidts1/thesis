@@ -1,5 +1,6 @@
 import numpy as np
 from numba import jit
+import scipy.optimize as opt
 import matplotlib.pyplot as plt
 
 ################################################################
@@ -140,6 +141,43 @@ def RungeKutta_split(timestep, final_time, initial_0, initial_1, omega_0, h_0, b
 
     return [time_range, m_0, m_1, J_1]
 
+
+def stationary(field_list, beta):
+    """
+    :param field_list: an ordered list
+        containing the field strengths over which you want the stationary solution
+    :param beta: float
+        the inverse temperature
+    :return: array(2*len(field_list)x 2)
+        result[:,0] contains the solutions to dmdt=0
+        result[:,1] contains the field strength twice
+    """
+    estimate = -1.0
+    result = np.empty((2,2*len(field_list)) )
+
+    # rising field
+    for i in range(len(field_list)):
+        inter = opt.root(dmdt, estimate, args=(beta, field_list[i]))
+
+        while not inter.success:
+            estimate += 0.1
+            inter = opt.root(dmdt, estimate, args=(beta, field_list[i]))
+
+        result[1][i], result[0][i] = inter.x, field_list[i]
+        estimate = result[1][i]
+
+    # lowering field
+    for i in range(len(field_list)):
+        inter = opt.root(dmdt, estimate, args=(beta, field_list[-(i+1)]))
+
+        while not inter.success:
+            estimate -= 0.1
+            inter = opt.root(dmdt, estimate, args=(beta, field_list[-(i+1)]))
+
+        result[1][len(field_list)+i], result[0][len(field_list)+i] = inter.x, field_list[-(i+1)]
+        estimate = result[1][len(field_list)+i]
+
+    return result
 #%%
 
 ################################################################
@@ -163,6 +201,28 @@ def write_expl_first_figure(omega_0, h_0, beta_0, omega_beta, m_init, dt, init_t
                "\n timestep = " + str(dt) +
                "\n init_time = " + str(init_time)
     )
+    file.close()
+
+
+def write_expl_omega_0_fig(omega_0, h_0, beta_0, omega_beta, m_init, dt, init_time):
+    file = open("infl_omega_0_warm.txt", "w")
+    file.write("the data comtains two arrays, data (4,steps) and stat_data (2, steps) \n"
+               "data[0] is the time array\n"
+               "all other rows are magnetizations\n"
+               "data[1]:omega_0 = " + str(omega_0[0]) +
+               "\n data[2]:omega_0 = " + str(omega_0[1]) +
+               "\n data[3]:omega_0 = " + str(omega_0[2]) +
+               "\n other variables are:"
+               "\n beta_0 = " + str(beta_0) +
+               "\n h_0 = " + str(h_0) +
+               "\n omega_beta = " + str(omega_beta) +
+               "\n m_init = " + str(m_init) +
+               "\n timestep = " + str(dt) +
+               "\n init_time = " + str(init_time) +
+               "\n the stat_data contains stationary solutions"
+               "\n stat_data[0] is a field list"
+               "\n stat_data[1] is the stationary solution at that field"
+               )
     file.close()
 
 ################################################################
@@ -201,10 +261,92 @@ def first_hyst_fig():
     write_expl_first_figure(omega_0, h_0, beta_0, np.nan, m_init, dt, 1)
 
 
+def influence_omega_0_warm():
+    ### parameters ###
+    #physical parameters
+    omega_0 = [0.002, 0.02, 0.1]
+    h_0 = 0.7
+    beta_0 = 0.85
+    m_init = 0 #initial value of magnetization
+    init_time = 1 #number of periods before measurement
+    measure_time = 1 #number of periods for measurement
+
+    for i in range(len(omega_0)):
+        # calculation parameters now depend on omega_0
+        dt = 5e-5 / omega_0[i]  # A small amount with respect to omega (I will always use omega_beta << omega_0
+        t_final = (init_time + measure_time) * np.pi * 2 / omega_0[i]
+        step_number = int(t_final / dt)
+
+        # do calculation
+        m_t = RungeKutta_simple(dt, t_final, m_init, omega_0[i], h_0, beta_0)
+        if i==0:
+            result = np.empty((5, len(m_t[0][(step_number * measure_time) // (init_time+measure_time):]))) ## making the results array
+
+        result[i+1] = m_t[1][(step_number * measure_time) // (init_time+measure_time):] ## keeping only the measurement periods
+
+    # adding the time (in radians) to the results array
+    time = (m_t[0][(step_number * measure_time) // (init_time+measure_time):] -
+            m_t[0][(step_number * measure_time) // (init_time+measure_time)])
+    result[0]= omega_0[-1] * time
+
+    #### Now I should add the stationary one
+    h = np.linspace(-h_0, h_0, 1000)
+
+    stat_result = stationary(h, beta_0)
+
+    # plt.plot(result[0], result[1])
+    # plt.show()
+
+    np.savez("infl_omega_0_warm.npz", data=result, stat_data=stat_result)
+
+    write_expl_omega_0_fig(omega_0, h_0, beta_0, np.nan, m_init, dt, 1)
+
+
+def influence_omega_0_cold():
+    ### parameters ###
+    #physical parameters
+    omega_0 = [0.002, 0.02, 0.1]
+    h_0 = 0.7
+    beta_0 = 1.5
+    m_init = 0 #initial value of magnetization
+    init_time = 1 #number of periods before measurement
+    measure_time = 1 #number of periods for measurement
+
+    for i in range(len(omega_0)):
+        # calculation parameters now depend on omega_0
+        dt = 5e-5 / omega_0[i]  # A small amount with respect to omega (I will always use omega_beta << omega_0
+        t_final = (init_time + measure_time) * np.pi * 2 / omega_0[i]
+        step_number = int(t_final / dt)
+
+        # do calculation
+        m_t = RungeKutta_simple(dt, t_final, m_init, omega_0[i], h_0, beta_0)
+        if i==0:
+            result = np.empty((5, len(m_t[0][(step_number * measure_time) // (init_time+measure_time):]))) ## making the results array
+
+        result[i+1] = m_t[1][(step_number * measure_time) // (init_time+measure_time):] ## keeping only the measurement periods
+
+    # adding the time (in radians) to the results array
+    time = (m_t[0][(step_number * measure_time) // (init_time+measure_time):] -
+            m_t[0][(step_number * measure_time) // (init_time+measure_time)])
+    result[0]= omega_0[-1] * time
+
+    #### Now I should add the stationary one
+    h = np.linspace(-h_0, h_0, 1000)
+
+    stat_result = stationary(h, beta_0)
+
+    # plt.plot(result[0], result[1])
+    # plt.show()
+
+    np.savez("infl_omega_0_cold.npz", data=result, stat_data=stat_result)
+
+    write_expl_omega_0_fig(omega_0, h_0, beta_0, np.nan, m_init, dt, 1)
 
 
 def main():
-    first_hyst_fig()
+    # first_hyst_fig()
+    influence_omega_0_warm()
+    influence_omega_0_cold()
 
 
 

@@ -6,6 +6,10 @@ plt.rcParams['text.usetex'] = True
 
 
 def first_hyst_fig_plot():
+    """
+    Makes both th m(t) figure and the m(h) figure. Does not save them automatically, but this can be changed
+    :return:
+    """
     data = np.load("fig_trans.npy")
 
     ## In here are the things that need to be read from the txt file
@@ -64,9 +68,109 @@ def first_hyst_fig_plot():
     plt.show()
 
 
-def main():
-    first_hyst_fig_plot()
+def infl_omega_0_plot():
+    """
+    Makes the m(h) figures for changing omega_0 in both the warm and the cold case.
+        Does not save them automatically, but this can be changed
+    :return:
+    """
 
+    #warm
+    dataset = np.load("infl_omega_0_warm.npz")
+    data = dataset["data"]
+    stat_data = dataset["stat_data"]
+    dataset.close()
+
+    ## In here are the things that need to be read from the txt file
+    omega_0 = np.array([0.002, 0.02, 0.1])
+    h_0 = 0.7
+    beta_0_warm = 0.85
+    beta_0_cold = 2
+
+    # Setting lay-out variables
+    dpi_set = 100.0
+    figsize_set = [6.4,4.8]
+    plt.rcParams.update({
+        "axes.labelsize": 15,    #size of labels
+        "grid.alpha": .5,       #visibility of grid
+        "grid.color": "grey",
+        "grid.linestyle": "-",
+        "grid.linewidth": .4,
+        "legend.fontsize": 15,
+        "lines.linewidth": 1,
+        "xtick.labelsize": 15,  #size of ticks
+        "ytick.labelsize": 15
+    })
+
+    ## Here comes the parametrized version of the plot
+    h_t = h_0 * np.sin(data[0])
+
+    fig_alt_warm, ax_alt_warm = plt.subplots(figsize=figsize_set, dpi=dpi_set, layout='constrained')
+            ## use larger dpi when making final figure
+    ax_alt_warm.plot(h_t, data[1], label=r"$\omega_0 = $" + str(omega_0[0]))
+    ax_alt_warm.plot(h_t, data[2], label=r"$\omega_0 = $" + str(omega_0[1]))
+    ax_alt_warm.plot(h_t, data[3], label=r"$\omega_0 = $" + str(omega_0[2]))
+
+    ax_alt_warm.plot(stat_data[0], stat_data[1], label="stationary solution")
+
+    ax_alt_warm.set_xlabel("$h(t)$")
+    ax_alt_warm.set_ylabel("$m(t)$")
+
+    plt.grid(True)
+    ax_alt_warm.legend()
+
+    #cold
+    dataset = np.load("infl_omega_0_cold.npz")
+    data = dataset["data"]
+    stat_data = dataset["stat_data"]
+    dataset.close()
+
+    ## In here are the things that need to be read from the txt file
+    omega_0 = np.array([0.002, 0.02, 0.1])
+    h_0 = 0.7
+    beta_0_warm = 0.85
+    beta_0_cold = 2
+
+    # Setting lay-out variables
+    dpi_set = 100.0
+    figsize_set = [6.4,4.8]
+    plt.rcParams.update({
+        "axes.labelsize": 15,    #size of labels
+        "grid.alpha": .5,       #visibility of grid
+        "grid.color": "grey",
+        "grid.linestyle": "-",
+        "grid.linewidth": .4,
+        "legend.fontsize": 15,
+        "legend.loc": "upper left",
+        "lines.linewidth": 1,
+        "xtick.labelsize": 15,  #size of ticks
+        "ytick.labelsize": 15
+    })
+
+    ## Here comes the parametrized version of the plot
+    h_t = h_0 * np.sin(data[0])
+
+    fig_alt_cold, ax_alt_cold = plt.subplots(figsize=figsize_set, dpi=dpi_set, layout='constrained')
+            ## use larger dpi when making final figure
+    ax_alt_cold.plot(h_t, data[1], label=r"$\omega_0 = $" + str(omega_0[0]))
+    ax_alt_cold.plot(h_t, data[2], label=r"$\omega_0 = $" + str(omega_0[1]))
+    ax_alt_cold.plot(h_t, data[3], label=r"$\omega_0 = $" + str(omega_0[2]))
+
+    ax_alt_cold.plot(stat_data[0], stat_data[1], label="stationary solution")
+
+    ax_alt_cold.set_xlabel("$h(t)$")
+    ax_alt_cold.set_ylabel("$m(t)$")
+
+    plt.grid(True)
+    ax_alt_cold.legend()
+
+
+    plt.show()
+
+
+def main():
+    # first_hyst_fig_plot()
+    infl_omega_0_plot()
 
 if __name__ == '__main__':
     main()
