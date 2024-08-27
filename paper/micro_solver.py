@@ -16,7 +16,7 @@ def energy(N_up, field, N):
     :param N: int: number of spins
     :return: float: the energy
     """
-    m = (N_up - (N-N_up))/N
+    m = (2*N_up)/N-1
     return -N * (m ** 2 / 2 + field * m)
 
 
@@ -32,12 +32,11 @@ def rates(N_up, beta, field, N, dt):
     result = np.zeros(2)
     original_energy = energy(N_up, field, N)
 
-    if N_up != N:
-        energy_up = energy(N_up+1, field, N)
-        result[0] = dt*(N-N_up)/(1+np.exp(beta * (original_energy - energy_up)))
-    if N_up != 0:
-        energy_down = energy(N_up-1, field, N)
-        result[1] = dt*N_up/(1+np.exp(beta * (original_energy - energy_down)))
+    energy_up = energy(N_up+1, field, N)
+    result[0] = dt*(N-N_up)/(1+np.exp(-beta * (original_energy - energy_up)))
+
+    energy_down = energy(N_up-1, field, N)
+    result[1] = dt*N_up/(1+np.exp(-beta * (original_energy - energy_down)))
 
     return result
 
@@ -58,7 +57,7 @@ def state_update(N_up, beta, field, N, dt):
 
 
 @jit()
-def solver(N, field_arr, beta_arr, time_arr, init_steps, dt):
+def solver(N, field_arr, beta_arr, time_arr, init_steps, dt, exp_steps):
     """
     Solves the finite spin model
     :param N: spin number
@@ -75,14 +74,10 @@ def solver(N, field_arr, beta_arr, time_arr, init_steps, dt):
     #initialize open to change
     N_up = random.randint(0, N)
 
-    exp_steps = len(time_arr - init_steps)
     result = np.empty((3, exp_steps))
     result[0] = time_arr[init_steps:]
 
-    print(len(time_arr[init_steps:]))
-    print(len(result[1]))
-
-    print("This should be close to 0 " + str(result[0][0]))
+    start = result[0][0]
 
     for i in range(init_steps):
         N_up = state_update(N_up, beta_arr[i], field_arr[i], N, dt)
@@ -94,6 +89,31 @@ def solver(N, field_arr, beta_arr, time_arr, init_steps, dt):
 
     return result
 
+########################################################################
+######### Here are the files that write the explanations
+#######################################################################
+
+def write_expl_avg_m(omega_0, h_0, beta_0, N, run_number, dt, init_time, name):
+    file = open(name+".txt", "w")
+    file.write("the data has shape (4,steps)\n"
+               "data[0] is the time array\n"
+               "data[1] is the field array\n"
+               "data[2] is the average magnetization\n"
+               "data[3] is the variance on the magnetization\n"
+               " variables are:\n"
+               "omega_0 = " + str(omega_0) + "\n"
+               "h_0 = " + str(h_0) + "\n"
+               "beta_0 = " + str(beta_0) + "\n"
+               "timestep = " + str(dt) + "\n"
+               "N = " + str(N) + "\n"
+                "run_number = " + str(run_number) + "\n"
+               "init_time = " + str(init_time)
+    )
+    file.close()
+
+########################################################################
+######### Here are the specific examples worked out
+#######################################################################
 
 def Trial():
     x = solver(40, 0.7, 0.02, 3.0, 0.02, 0, 1.0, 1.0)
@@ -107,26 +127,24 @@ def Trial():
 
 def average_magnetization():
     # physical parameters
-    N_1 = 50
-    N_2 = 100
+    N = 100
 
     h_0 = 0.3
     omega_0 = 0.02
-    beta_0 = 1.3
+    beta_0 = 1.5
     # compute parameters
     exp_time = 1
     init_time = 1
 
-    dt_1 = 1/(2*N_1)  ## Perhaps we should check if this is indeed sufficient.
-    dt_2 = 1/(2*N_2)
+    dt = 1/(4*N)  ## Perhaps we should check if this is indeed sufficient.
 
-    run_number = 100
+    run_number = 5000
 
     # I have some doubts about np.arange for such long lists of arrays
     # (potential big number + small number error )
     #                                      https://numpy.org/doc/stable/reference/generated/numpy.arange.html
     # creating the arrays for the first one
-    time_arr = np.arange(start=-(2 * np.pi * init_time / omega_0), stop=2 * np.pi * exp_time / omega_0, step=dt_1)
+    time_arr = np.arange(start=-(2 * np.pi * init_time / omega_0), stop=2 * np.pi * exp_time / omega_0, step=dt)
     beta_arr = beta_0 * np.ones_like(time_arr)
     field_arr = h_0 * np.sin(omega_0 * time_arr)
 
@@ -137,15 +155,23 @@ def average_magnetization():
         init_steps += 1
     exp_steps = total_steps - init_steps
 
-    result_matrix_1 = solver(N_1, field_arr, beta_arr, time_arr, init_steps, dt_1)
+    avg_m = np.zeros((4, exp_steps))
 
+    for run in range(run_number):
+        run_result = solver(N, field_arr, beta_arr, time_arr, init_steps, dt, exp_steps)
+        avg_m[2] += run_result[1]
+        avg_m[3] += run_result[1]**2
 
+    avg_m[2] /= run_number
+    avg_m[3] /= run_number
 
+    avg_m[0] = run_result[0]
+    avg_m[1] = field_arr[init_steps:]
 
+    name = "avg_m_" + str(N)
 
-
-
-
+    np.save(name, avg_m)
+    write_expl_avg_m(omega_0, h_0, beta_0, N, run_number, dt, init_time, name)
 
 
 def main():
