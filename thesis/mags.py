@@ -5,6 +5,7 @@ import scipy.optimize as opt
 import setup
 from matplotlib.collections import LineCollection
 from matplotlib.lines import Line2D
+from basic_units import radians
 
 """Variable names: 
     m = instantaneous magnetization of the system (function of time)
@@ -114,52 +115,37 @@ def mosaicplot(tm, omega_0, h_0, omega_beta, epsilon, beta_0):
 def plotm_h():
     epsilon = 0
     h_0 = 0.3
-    beta = 2.1
+    beta = 0.8
     omega_0 = 0.02
     # omega_beta = round(omega_0*(1 + 0.2*np.random.random()), 6)
-    omega_beta = 0.1
+    omega_beta = 0.02
     # phi = np.random.random()
     phi = 0
     colorscaling = False
     t_final = 2*np.pi/omega_0*2
 
     m_of_t = calc_m(h_0, omega_0, beta, 1e-4/omega_0, t_final, omega_beta, epsilon, phase=phi)
-    delta_beta = setup.sinus(m_of_t[0][:], omega_beta, epsilon, phase=phi)
+    # delta_beta = setup.sinus(m_of_t[0][:], omega_beta, epsilon, phase=phi)
     h = setup.sinus(m_of_t[0][:], omega_0, h_0)
 
     l = len(m_of_t[0])
 
     fig, (axleft, axright) = plt.subplots(1, 2, figsize=(10, 4), sharey=True, layout='constrained')
-    title = (r"Magnetization around $\beta_{c_2}$ for "
-             r"$ \omega_0 = $" + str(omega_0) +
-             # r", $\omega_\beta = $" + str(omega_beta) +
-             # r", $\beta = $" + str(beta) +
-             r", $h_0 = $" + str(h_0)
-             # + r", $\epsilon = $" + str(epsilon)
+    title = (r"$\beta = $"+str(beta)
              )
     fig.suptitle(title)
-
-    axleft.plot(m_of_t[0][l // 2:], m_of_t[1][l // 2:], label=r"$m$ at $\beta=2.1$")
-
-
+    t_rescaled = (m_of_t[0][l // 2:] - m_of_t[0][l // 2])*omega_0*radians
+    # axleft.plot(t_rescaled, m_of_t[1][l // 2:], label=r"$\beta=2.1$", xunits=radians)
     # axleft.plot(m_of_t[0][l // 2:], 5 * delta_beta[l // 2:], alpha=0.6, label=r"$5*\Delta \beta$")
-    axleft.axhline(y=0, color='black', linestyle='--', lw=0.4, alpha=0.4)
-    axleft.set_xlabel("$t$")
-
-    res2 = calc_m(h_0, omega_0, beta, 1e-5/omega_0, omega_beta, 0)
-
+    axleft.set_xlabel(r"$\omega_0 t$")
     axright.set_xlim(-h_0 - 0.05, h_0 + 0.05)
     axright.set_ylim(-1.05, 1.05)
-
-    axright.plot(h[l // 2:], m_of_t[1][l // 2:], label=r"$m$ at $\beta=2.1$")
+    # axright.plot(h[l // 2:], m_of_t[1][l // 2:], label=r"$\beta=2.1$")
 
     m_of_t = calc_m(h_0, omega_0, beta+0.1, 1e-4 / omega_0, t_final, omega_beta, epsilon, phase=phi)
-
-    axleft.plot(m_of_t[0][l // 2:], m_of_t[1][l // 2:], label=r"$m$ at $\beta=2.2$", color='r')
-
+    axleft.plot(t_rescaled, m_of_t[1][l // 2:], label=r"$\beta=2.2$", color='r', xunits=radians)
     axright.plot(h[l // 2:], m_of_t[1][l // 2:], label=r"$m$ at $\beta=2.2$", color='r')
-
-    axleft.plot(m_of_t[0][l // 2:], h[l // 2:], alpha=0.6, label="$h$")
+    axleft.plot(t_rescaled, h[l // 2:], alpha=0.5, label="$h$", xunits=radians, color='k')
 
 
     if colorscaling:
@@ -170,19 +156,18 @@ def plotm_h():
         lc.set_array(m_of_t[0][l // 2:])
 
         axright.add_collection(lc)
-    # else:
-        # axright.plot(h[l // 2:], m_of_t[1][l // 2:])
+    else:
+        axright.plot(h[l // 2:], m_of_t[1][l // 2:])
 
     # axright.plot(h[l // 2:], res2[1][l // 2:], alpha=0.7, label=r"$\epsilon = 0$", color='black', lw=0.75)
     # axright.legend(loc="lower right")
-    axright.axhline(y=0, color='black', linestyle='--', lw=0.4, alpha=0.4)
-    axright.axvline(x=0, color='black', linestyle='--', lw=0.4, alpha=0.4)
 
-    axleft.legend(loc='lower left')
-    axright.legend(loc='lower right')
+    axleft.legend(loc='upper right')
 
     axright.set_xlabel("h")
     axright.set_ylabel("m")
+    axleft.grid(visible=True, axis='both', linewidth=0.5, alpha=0.3, color='k')
+    axright.grid(visible=True, axis='both', linewidth=0.5, alpha=0.3, color='k')
 
     plt.show()
 
@@ -264,33 +249,172 @@ def plotcompare_lin_method():
     plt.show()
 
 
-    def plotJ():
-        epsilon = 0
-        h_0 = 0.5
-        beta_0 = 1.4
-        omega_0 = 0.02
-        omega_beta = omega_0
+# def plotJ():
+#     epsilon = 0
+#     h_0 = 0.5
+#     beta_0 = 1.4
+#     omega_0 = 0.02
+#     omega_beta = omega_0
+#
+#     m_of_t = calc_m(h_0, omega_0, beta_0, 1e-4 / omega_0, t_final, omega_beta, epsilon)
 
-        m_of_t = calc_m(h_0, omega_0, beta_0, 1e-4 / omega_0, t_final, omega_beta, epsilon)
+
+def compare_omega():
+    epsilon=0
+    h_0 = 0.3
+    beta = 2.0
+    omega_0_array = [0.001, 0.02, 0.1]
+    # omega_beta = round(omega_0*(1 + 0.2*np.random.random()), 6)
+    omega_beta = 0.1
+    # phi = np.random.random()
+    phi = 0
+
+    fig, (axleft, axright) = plt.subplots(1, 2, figsize=(10, 4), sharey=True, layout='constrained')
+    title = (r"Magnetization for different values of $\omega_0$" +
+             r", $h_0 = $" + str(h_0)
+             + r", $\beta = $" + str(beta))
+
+    axright.set_xlim(-h_0 - 0.05, h_0 + 0.05)
+
+
+    for omega_0 in omega_0_array:
+        t_final = 2 * np.pi / omega_0 * 2
+
+        m_of_t = calc_m(h_0, omega_0, beta, 1e-4 / omega_0, t_final, omega_beta, epsilon, phase=phi)
+        h = setup.sinus(m_of_t[0][:], omega_0, h_0)
+
+        l = len(m_of_t[0])
+
+        fig.suptitle(title)
+
+        axright.plot(h[l // 2:], m_of_t[1][l // 2:])
+        t = (m_of_t[0][l // 2:] - m_of_t[0][l // 2]) * omega_0*radians
+        axleft.plot(t, m_of_t[1][l // 2:], label=(r"$\omega_0 = $" + str(omega_0)), xunits=radians)
+
+    axleft.plot(t, h[l // 2:], label='$h$', color='black', xunits=radians, alpha=0.5)
+    axright.axhline(y=0, color='black', linestyle='--', lw=0.4, alpha=0.4)
+    axright.axvline(x=0, color='black', linestyle='--', lw=0.4, alpha=0.4)
+
+    axleft.legend(loc='upper right')
+
+    axleft.set_xlabel(r"$\omega_0 t$")
+    axleft.set_ylabel("$m$")
+
+    axright.set_xlabel("$h$")
+    axright.set_ylabel("$m$")
+    axleft.grid(visible=True, axis='both', linewidth=0.5, alpha=0.3, color='k')
+    axright.grid(visible=True, axis='both', linewidth=0.5, alpha=0.3, color='k')
+
+    plt.show()
+
+
+def someplot():
+    epsilon = 0
+    h_0=0.3
+    beta_arr = [np.linspace(1.0, 2.2, 5)]
+    omega_0 = 0.02
+    # omega_beta = round(omega_0*(1 + 0.2*np.random.random()), 6)
+    omega_beta = omega_0
+    # phi = np.random.random()
+    phi = 0
+    t_final = 2 * np.pi / omega_0 * 2
+
+    m_of_t = calc_m(h_0, omega_0, beta, 1e-4 / omega_0, t_final, omega_beta, epsilon, phase=phi)
+    # delta_beta = setup.sinus(m_of_t[0][:], omega_beta, epsilon, phase=phi)
+    h = setup.sinus(m_of_t[0][:], omega_0, h_0)
+
+    l = len(m_of_t[0])
+
+    fig, (axleft, axright) = plt.subplots(1, 2, figsize=(10, 4), sharey=True, layout='constrained')
+    title = (r"Magnetization for "
+             r"$ \omega_0 = $" + str(omega_0) +
+             # r", $\omega_\beta = $" + str(omega_beta) +
+             r", $\beta = $" + str(beta) +
+             r", $h_0 = $" + str(h_0)
+             # + r", $\epsilon = $" + str(epsilon)
+             )
+    fig.suptitle(title)
+
+    t_rescaled = (m_of_t[0][l // 2:] - m_of_t[0][l // 2])*omega_0*radians
+
+    axleft.plot(t_rescaled, m_of_t[1][l // 2:], label=r"$m$", xunits=radians)
+    axleft.plot(t_rescaled, h[l // 2:], label="$h$", xunits=radians, color='k', alpha=0.5)
+    axleft.legend(loc='upper right')
+
+    axleft.grid(visible=True, axis='both', linewidth=0.5, alpha=0.3, color='k')
+    axright.grid(visible=True, axis='both', linewidth=0.5, alpha=0.3, color='k')
+
+    axleft.set_xlabel(r"$\omega_0 t$")
+    axleft.set_ylabel("$m$")
+
+    axright.set_xlabel("$h$")
+    axright.set_ylabel("$m$")
+
+    axright.plot(h[l // 2:],m_of_t[1][l // 2:])
+
+    plt.show()
+
+
+def someplot2():
+    beta = 2.19
+    epsilon = 0
+    h_0 = 0.3
+    omega_0 = 0.02
+    omega_beta = omega_0
+    phi = 0
+    t_final = 2 * np.pi / omega_0 * 2
+
+    m_of_t = calc_m(h_0, omega_0, beta, 1e-4 / omega_0, t_final, omega_beta, epsilon, phase=phi)
+    h = setup.sinus(m_of_t[0][:], omega_0, h_0)
+
+    l = len(m_of_t[0])
+
+    fig, ax = plt.subplots(layout='constrained', figsize=(6.4*0.45, 4.8*0.55))
+    title = (r"$\beta = $"+str(beta)
+             )
+    fig.suptitle(title)
+
+    ax.grid(visible=True, axis='both', linewidth=0.5, alpha=0.3, color='k')
+
+    ax.set_xlabel("$h$")
+    ax.set_ylabel("$m$")
+    ax.set_ylim((-1,1))
+    ax.tick_params(axis='both',
+                   which='both',
+                   bottom=False,
+                   top=False,
+                   left=False,
+                   right=False,
+                   labelbottom=False,
+                   labelleft=False)
+    ax.set_axis_off()
+
+    ax.plot(h[l // 2:], m_of_t[1][l // 2:])
+
+    plt.show()
 
 
 def main():
     # field_list = np.linspace(-0.8, 0.8, 500)
     # for beta_0 in [0.5, 0.75, 1.0, 1.25, 1.5]:
     #     exact = stationary(field_list, beta_0)
-    #     label = r'$\beta = $' + str(beta_0)
+    #     label = r'$J\beta = $' + str(beta_0)
     #     plt.plot(exact[:, 1], exact[:, 0], label=label)
     #
     # plt.xlabel('$h$')
     # plt.ylabel(r'$m$')
-    # plt.title(r'Stationary solution of the Curie-Weiss magnet')
+    # plt.grid(visible=True, axis='both', linewidth=0.5, alpha=0.3, color='k')
+    # plt.title(r'(Meta)stable Solutions of CW Magnet')
     #
     # plt.legend()
     # plt.tight_layout()
     # plt.show()
 
-    plotm_h()
 
+    # compare_omega()
+    # someplot()
+    someplot2()
+    # plotm_h()
 
 
 
