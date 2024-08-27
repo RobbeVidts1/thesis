@@ -58,41 +58,29 @@ def state_update(N_up, beta, field, N, dt):
 
 
 @jit()
-def solver(N, h_0, omega_0, beta_0, omega_beta, epsilon, init_time, exp_time):
+def solver(N, field_arr, beta_arr, time_arr, init_steps, dt):
     """
     Solves the finite spin model
     :param N: spin number
-    :param h_0:
-    :param omega_0:
-    :param beta_0:
-    :param omega_beta:
-    :param epsilon:
-    :param init_time: float: periods of omega_0 to use for initializing
-    :param exp_time: float: periods of omega_beta to use for experiment # notice difference
-    :return: array containing time, magnetization and energy
+    :param field_arr: array containing the field strengths
+    :param beta_arr: array containing time-dependent temperatures
+    :param time_arr: array containg the time
+    :return: array containing time, magnetization and energy, only of the experiment part (no equilibration)
     """
     # I have some doubts about np.arange for such long lists of arrays
     # (potential big number + small number error )
     #                                      https://numpy.org/doc/stable/reference/generated/numpy.arange.html
-    dt = 5e-5/omega_0 # This is still open to change
-    time_arr = np.arange(start=-(2*np.pi*init_time/omega_0), stop=2*np.pi*exp_time/omega_beta, step=dt)
-    beta_arr = beta_0*(1+epsilon*np.sin(omega_beta*time_arr))
-    field_arr = h_0*np.sin(omega_0*time_arr)
 
-    # finding all the step numbers
-    total_steps = len(time_arr)
-    init_steps = 0
-    # init_steps = int(total_steps/(exp_time*(omega_0/omega_beta))) - 10 ## making a guess to make the while loop short
-                    # (only works well when init_time==1)
-    while time_arr[init_steps + 1] < 0:
-        init_steps += 1
-    exp_steps = total_steps - init_steps
 
     #initialize open to change
     N_up = random.randint(0, N)
 
+    exp_steps = len(time_arr - init_steps)
     result = np.empty((3, exp_steps))
     result[0] = time_arr[init_steps:]
+
+    print(len(time_arr[init_steps:]))
+    print(len(result[1]))
 
     print("This should be close to 0 " + str(result[0][0]))
 
@@ -126,12 +114,42 @@ def average_magnetization():
     omega_0 = 0.02
     beta_0 = 1.3
     # compute parameters
-    exp_time = 5000
+    exp_time = 1
     init_time = 1
+
+    dt_1 = 1/(2*N_1)  ## Perhaps we should check if this is indeed sufficient.
+    dt_2 = 1/(2*N_2)
+
+    run_number = 100
+
+    # I have some doubts about np.arange for such long lists of arrays
+    # (potential big number + small number error )
+    #                                      https://numpy.org/doc/stable/reference/generated/numpy.arange.html
+    # creating the arrays for the first one
+    time_arr = np.arange(start=-(2 * np.pi * init_time / omega_0), stop=2 * np.pi * exp_time / omega_0, step=dt_1)
+    beta_arr = beta_0 * np.ones_like(time_arr)
+    field_arr = h_0 * np.sin(omega_0 * time_arr)
+
+    # finding all the step numbers
+    total_steps = len(time_arr)
+    init_steps = total_steps // 2 - 10 ## making a guess to make the while loop short
+    while time_arr[init_steps + 1] < 0:
+        init_steps += 1
+    exp_steps = total_steps - init_steps
+
+    result_matrix_1 = solver(N_1, field_arr, beta_arr, time_arr, init_steps, dt_1)
+
+
+
+
+
+
+
+
 
 
 def main():
-    Trial()
+    average_magnetization()
 
 
 if __name__ == '__main__':
