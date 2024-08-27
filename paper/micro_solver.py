@@ -34,17 +34,17 @@ def rates(N_up, beta, field, N, dt):
 
     if N_up != N:
         energy_up = energy(N_up+1, field, N)
-        result[0] = dt*N*(N-N_up)/(1+np.exp(beta * (original_energy - energy_up)))
+        result[0] = dt*(N-N_up)/(1+np.exp(beta * (original_energy - energy_up)))
     if N_up != 0:
         energy_down = energy(N_up-1, field, N)
-        result[1] = dt*N*N_up/(1+np.exp(beta * (original_energy - energy_down)))
+        result[1] = dt*N_up/(1+np.exp(beta * (original_energy - energy_down)))
 
     return result
 
 
 @jit()
 def state_update(N_up, beta, field, N, dt):
-    alpha_arr = rates(N_up, beta, field, N)
+    alpha_arr = rates(N_up, beta, field, N, dt)
     r = random.random()
 
     # updating the number of up-spins. If r is large, then more up_spins, if r is small, les up-spins
@@ -72,16 +72,17 @@ def solver(N, h_0, omega_0, beta_0, omega_beta, epsilon, init_time, exp_time):
     :return: array containing time, magnetization and energy
     """
     # I have some doubts about np.arange for such long lists of arrays
-    # (potential big number + small number error or
+    # (potential big number + small number error )
     #                                      https://numpy.org/doc/stable/reference/generated/numpy.arange.html
     dt = 5e-5/omega_0 # This is still open to change
     time_arr = np.arange(start=-(2*np.pi*init_time/omega_0), stop=2*np.pi*exp_time/omega_beta, step=dt)
     beta_arr = beta_0*(1+epsilon*np.sin(omega_beta*time_arr))
     field_arr = h_0*np.sin(omega_0*time_arr)
 
-    # finding all the steps
+    # finding all the step numbers
     total_steps = len(time_arr)
-    init_steps = int(total_steps/(exp_time*(omega_0/omega_beta))) - 10 ## making a guess to make the while loop short
+    init_steps = 0
+    # init_steps = int(total_steps/(exp_time*(omega_0/omega_beta))) - 10 ## making a guess to make the while loop short
                     # (only works well when init_time==1)
     while time_arr[init_steps + 1] < 0:
         init_steps += 1
@@ -93,12 +94,10 @@ def solver(N, h_0, omega_0, beta_0, omega_beta, epsilon, init_time, exp_time):
     result = np.empty((3, exp_steps))
     result[0] = time_arr[init_steps:]
 
-    print(result[0][0])
+    print("This should be close to 0 " + str(result[0][0]))
 
     for i in range(init_steps):
         N_up = state_update(N_up, beta_arr[i], field_arr[i], N, dt)
-
-    print(i)
 
     for i in range(exp_steps):
         N_up = state_update(N_up, beta_arr[init_steps + i], field_arr[init_steps + i], N, dt)
@@ -106,5 +105,36 @@ def solver(N, h_0, omega_0, beta_0, omega_beta, epsilon, init_time, exp_time):
         result[2][i] = energy(N_up, field_arr[init_steps + i], N)
 
     return result
+
+
+def Trial():
+    x = solver(40, 0.7, 0.02, 3.0, 0.02, 0, 1.0, 1.0)
+
+    fig1, ax1 = plt.subplots()
+    ax1.plot(x[0], x[1])
+    fig2, ax2 = plt.subplots()
+    ax2.plot(x[0],x[2])
+    plt.show()
+
+
+def average_magnetization():
+    # physical parameters
+    N_1 = 50
+    N_2 = 100
+
+    h_0 = 0.3
+    omega_0 = 0.02
+    beta_0 = 1.3
+    # compute parameters
+    exp_time = 5000
+    init_time = 1
+
+
+def main():
+    Trial()
+
+
+if __name__ == '__main__':
+    main()
 
 
