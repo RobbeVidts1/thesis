@@ -2,12 +2,14 @@ import numpy as np
 from numba import jit
 import scipy.optimize as opt
 import matplotlib.pyplot as plt
+import multiprocessing
+import concurrent.futures
 
 ################################################################
 #%% A load of functions used in calculations        ###############
 ################################################################
 
-@jit
+@jit()
 def sinus(t, omega, amp, a_0=0.0, phase=0.0):
     """
 
@@ -362,11 +364,15 @@ def influence_omega_0_cold():
     write_expl_omega_0_fig(omega_0, h_0, beta_0, np.nan, m_init, dt, 1)
 
 
-def HeatCap_unbounded():
-    omega_0 = 0.02
+def HeatCap_unbounded(h_0):
+    """
+    This function gives the heatcapacity array for a given value of h_0, one should make sure that all parameters
+    here are the same as in HeatCap_unbounded_fig()
+    :param h_0:
+    :return:
+    """
     r = 20 ## defines omega beta by omega_beta = omega_0/r
-    h_0_arr = [0.01, 0.08, 0.16, 0.3]
-    # h_0_arr = [0.2]
+    omega_0 = 0.02
 
     omega_beta = omega_0 / r
 
@@ -377,27 +383,48 @@ def HeatCap_unbounded():
 
     beta_num = 200 # number of points on the x-axis
     beta_arr = np.linspace(0,3.0, beta_num)
+    result_arr = np.empty(beta_num)
+
+    # now we do the calculation
+    for beta_i in range(beta_num):
+        m_t = RungeKutta_split(dt, t_final, initial_0=-0.1, initial_1=-0.1, omega_0=omega_0, h_0=h_0,
+                       beta_0=beta_arr[beta_i], omega_beta=omega_beta)
+
+        Jcos = m_t[3][step_number // (r+1):] * np.cos(omega_beta * m_t[0][step_number // (r+1):])
+        result_arr[beta_i] = beta_arr[beta_i] / np.pi * dt * (sum(Jcos) - (Jcos[0] + Jcos[-1]) / 2)
+        print(beta_i)
+    return (h_0, result_arr)
+
+
+
+def HeatCap_unbounded_fig():
+    omega_0 = 0.02
+    r = 20 ## defines omega beta by omega_beta = omega_0/r
+    h_0_arr = [0.01, 0.08, 0.16, 0.3]
+    dt = 1e-6 / omega_0
+
+
+    beta_num = 200 # number of points on the x-axis
+    beta_arr = np.linspace(0,3.0, beta_num)
 
     result_arr = np.empty((1+len(h_0_arr), beta_num))
     result_arr[0] = beta_arr
 
-    for h_i in range(len(h_0_arr)):
-        for beta_i in range(beta_num):
-            m_t = RungeKutta_split(dt, t_final, initial_0=-0.1, initial_1=-0.1, omega_0=omega_0, h_0=h_0_arr[h_i],
-                           beta_0=beta_arr[beta_i], omega_beta=omega_beta)
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        results = executor.map(HeatCap_unbounded, h_0_arr)
+        for i,result in enumerate(results):
+            result_arr[i+1] = result
 
-            Jcos = m_t[3][step_number // (r+1):] * np.cos(omega_beta * m_t[0][step_number // (r+1):])
-            result_arr[beta_i+1] = beta_arr[beta_i] / np.pi * dt * (sum(Jcos) - (Jcos[0] + Jcos[-1]) / 2)
-
+    print(result)
     np.save("Heatcap_unbounded", result_arr)
-    write_expl_heatcap_unbounded(omega_0, h_0_arr, omega_beta, -0.1, dt, 1)
+    write_expl_heatcap_unbounded(omega_0, h_0_arr, omega_0/r, -0.1, dt, 1)
 
 
 def main():
     # first_hyst_fig()
     # influence_omega_0_warm()
     # influence_omega_0_cold()
-    HeatCap_unbounded()
+    HeatCap_unbounded_fig()
 
 
 
