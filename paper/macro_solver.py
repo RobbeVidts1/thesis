@@ -93,7 +93,7 @@ def RungeKutta_simple(timestep, final_time, initial, omega_0, h_0, beta_0, omega
 @jit()
 def RungeKutta_split(timestep, final_time, initial_0, initial_1, omega_0, h_0, beta_0, omega_beta):
     """
-    Performs the Runge Kutta 4 algorithm on function dmdt and returns a matrix [t,m(t)]
+    Performs the Runge Kutta 4 algorithm on function dmdt and returns a matrix [t,m_0(t), m_1, J_1]
     :param initial_1:
     :param initial_0:
     :param timestep:
@@ -225,8 +225,27 @@ def write_expl_omega_0_fig(omega_0, h_0, beta_0, omega_beta, m_init, dt, init_ti
                )
     file.close()
 
+
+def write_expl_heatcap_unbounded(omega_0, h_0, omega_beta, m_init, dt, init_time):
+    file = open("Heatcap_unbounded.txt", "w")
+    file.write("the data comtains one array, data ("+str(len(h_0)) +",beta_array) \n"
+               "data[0] is the beta array\n"
+               "all other rows are heat capacities\n"
+               "data[1]:h_0 = " + str(h_0[0]) +
+               "\n data[2]:h_0 = " + str(h_0[1]) +
+               "\n data[3]:h_0 = " + str(h_0[2]) +
+               "\n data[4]:h_0 = " + str(h_0[3]) +
+               "\n other variables are:"
+               "\n omega_beta = " + str(omega_beta) +
+               "\n omega_0 = " + str(omega_0) +
+               "\n m_init = " + str(m_init) +
+               "\n timestep = " + str(dt) +
+               "\n init_time = " + str(init_time)
+               )
+    file.close()
+
 ################################################################
-#%% The calculations and the main        ###############
+#%% Figure specific calculations and the main        ###############
 ################################################################
 
 def first_hyst_fig():
@@ -343,10 +362,42 @@ def influence_omega_0_cold():
     write_expl_omega_0_fig(omega_0, h_0, beta_0, np.nan, m_init, dt, 1)
 
 
+def HeatCap_unbounded():
+    omega_0 = 0.02
+    r = 20 ## defines omega beta by omega_beta = omega_0/r
+    h_0_arr = [0.01, 0.08, 0.16, 0.3]
+    # h_0_arr = [0.2]
+
+    omega_beta = omega_0 / r
+
+    dt = 1e-6 / omega_0
+
+    t_final = 2 * np.pi * (1.0 / omega_beta + 1.0/omega_0)
+    step_number = int(t_final / dt)
+
+    beta_num = 200 # number of points on the x-axis
+    beta_arr = np.linspace(0,3.0, beta_num)
+
+    result_arr = np.empty((1+len(h_0_arr), beta_num))
+    result_arr[0] = beta_arr
+
+    for h_i in range(len(h_0_arr)):
+        for beta_i in range(beta_num):
+            m_t = RungeKutta_split(dt, t_final, initial_0=-0.1, initial_1=-0.1, omega_0=omega_0, h_0=h_0_arr[h_i],
+                           beta_0=beta_arr[beta_i], omega_beta=omega_beta)
+
+            Jcos = m_t[3][step_number // (r+1):] * np.cos(omega_beta * m_t[0][step_number // (r+1):])
+            result_arr[beta_i+1] = beta_arr[beta_i] / np.pi * dt * (sum(Jcos) - (Jcos[0] + Jcos[-1]) / 2)
+
+    np.save("Heatcap_unbounded", result_arr)
+    write_expl_heatcap_unbounded(omega_0, h_0_arr, omega_beta, -0.1, dt, 1)
+
+
 def main():
     # first_hyst_fig()
-    influence_omega_0_warm()
-    influence_omega_0_cold()
+    # influence_omega_0_warm()
+    # influence_omega_0_cold()
+    HeatCap_unbounded()
 
 
 
