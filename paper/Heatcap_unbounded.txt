@@ -1,0 +1,13 @@
+the data comtains one array, data (4,beta_array) 
+data[0] is the beta array
+all other rows are heat capacities
+data[1]:h_0 = 0.01
+ data[2]:h_0 = 0.08
+ data[3]:h_0 = 0.16
+ data[4]:h_0 = 0.3
+ other variables are:
+ omega_beta = 0.004
+ omega_0 = 0.02
+ m_init = -0.1
+ timestep = 4.9999999999999996e-05
+ init_time = 1
