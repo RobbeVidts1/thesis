@@ -6,7 +6,7 @@ data[1]:h_0 = 0.01
  data[3]:h_0 = 0.16
  data[4]:h_0 = 0.3
  other variables are:
- omega_beta = 0.004
+ omega_beta = 0.001
  omega_0 = 0.02
  m_init = -0.1
  timestep = 4.9999999999999996e-05

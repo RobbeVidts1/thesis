@@ -393,7 +393,7 @@ def HeatCap_unbounded(h_0):
         Jcos = m_t[3][step_number // (r+1):] * np.cos(omega_beta * m_t[0][step_number // (r+1):])
         result_arr[beta_i] = beta_arr[beta_i] / np.pi * dt * (sum(Jcos) - (Jcos[0] + Jcos[-1]) / 2)
         print(beta_i)
-    return (h_0, result_arr)
+    return result_arr
 
 
 
@@ -415,7 +415,7 @@ def HeatCap_unbounded_fig():
         for i,result in enumerate(results):
             result_arr[i+1] = result
 
-    print(result)
+    print(result_arr)
     np.save("Heatcap_unbounded", result_arr)
     write_expl_heatcap_unbounded(omega_0, h_0_arr, omega_0/r, -0.1, dt, 1)
 
