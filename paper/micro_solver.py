@@ -247,11 +247,11 @@ def avg_Heatcap_helper(beta_0, N):
     timer = time.time()
     h_0 = 0.3
     omega_0 = 0.02
-    r = 12  # Need to check if r=10 and r=20 are equal
+    r = 15  # Need to check if r=10 and r=20 are equal
     epsilon = 0.2  # Not sure what best value is.
-    dt=4
+    dt = 4
 
-    run_number = 200
+    run_number = 500
 
     result = 0
     for i in range(run_number):
@@ -264,31 +264,31 @@ def avg_Heatcap_helper(beta_0, N):
 def avg_Heatcap(N):
     h_0 = 0.3
     omega_0 = 0.02
-    r = 12 # Need to check if r=10 and r=20 are equal. It seems so. Perhaps use r=12, just to be sure
+    r = 15 # Need to check if r=10 and r=20 are equal. It seems so. Perhaps use r=12, just to be sure
     epsilon = 0.2 # Not sure what best value is.
-    run_number = 20 # 200 is actually quite reasonable already, perhaps 400 or 500 is final goal?
+    run_number = 500 # 200 is actually quite reasonable already, perhaps 400 or 500 is final goal?
     dt = 4 # use 2,3 or 4?
 
     transition_estimate = 2.1 # This depends on h_0 and omega_0
     end = 3.8
 
     # making a beta array with different densities around the transition temp
-    beta_density_low = 10 # probably use 20 and 50 to get a total of 130 datapoints
-    beta_density_high = 25
-    beta_arr = np.append(np.append(np.linspace(0,transition_estimate-0.5, num=int(1.5*beta_density_low),
+    beta_density_low = 20 # probably use 20 and 50 to get a total of 130 datapoints
+    beta_density_high = 50
+    beta_arr = np.append(np.append(np.linspace(0, transition_estimate-0.5, num=int(1.5*beta_density_low), #low density
                                                endpoint=False),
-                                   np.linspace(transition_estimate-0.5, transition_estimate+0.5,
+                                   np.linspace(transition_estimate-0.5, transition_estimate+0.5, #high density
                                                num=beta_density_high, endpoint=False)),
                          np.linspace(transition_estimate+0.5, end,
-                                     num=int( (end-transition_estimate+0.5) * beta_density_low)))
-    print(f'the total number of datapoints is {len(beta_arr)}')
+                                     num=int((end-transition_estimate+0.5) * beta_density_low))) #low density
+    # print(f'the total number of datapoints is {len(beta_arr)}')
 
     # performing the calculation in parallel, will need lots of repeats unfortunately
     result_arr = np.empty_like(beta_arr)
-    with concurrent.futures.ProcessPoolExecutor(max_workers=5) as executor: # max_workers says how many cpu's to use,
+    with concurrent.futures.ProcessPoolExecutor() as executor: # max_workers says how many cpu's to use,
         # make sure to remove when using cluster
         results = executor.map(avg_Heatcap_helper, beta_arr, repeat(N))
-        for i,result in enumerate(results):
+        for i, result in enumerate(results):
             result_arr[i] = result
             print(i) # So we know how far along we are
 
@@ -297,9 +297,7 @@ def avg_Heatcap(N):
     write_expl_avg_Heatcap(h_0, omega_0, r, N, run_number, dt, filename)
 
 
-    plt.plot(beta_arr, result_arr)
 
-    plt.show()
 
 
 
@@ -310,7 +308,9 @@ def avg_Heatcap(N):
 
 def main():
     # average_magnetization()
-    avg_Heatcap(10) ## When using cluster, probably make avg_Heatcap(N), and run for all desired N
+    # avg_Heatcap(50) ## When using cluster, probably make avg_Heatcap(N), and run for all desired N
+    avg_Heatcap(100)
+    avg_Heatcap(250)
 
 if __name__ == '__main__':
     main()
