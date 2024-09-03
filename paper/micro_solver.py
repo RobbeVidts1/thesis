@@ -237,7 +237,7 @@ def Heatcap(h_0, omega_0, beta_0, r, epsilon, N, dt_int):
     return C
 
 
-def avg_Heatcap_helper(beta_0):
+def avg_Heatcap_helper(beta_0, N):
     """
     This function is a helper function to avoid exceesive repeats in executor.map() which calculates the
     average heatcap in a single point => Always make sure the variables are the same as in avg_Heatcap
@@ -247,9 +247,8 @@ def avg_Heatcap_helper(beta_0):
     timer = time.time()
     h_0 = 0.3
     omega_0 = 0.02
-    r = 20  # Need to check if r=10 and r=20 are equal
+    r = 12  # Need to check if r=10 and r=20 are equal
     epsilon = 0.2  # Not sure what best value is.
-    N = 50
     dt=4
 
     run_number = 200
@@ -262,20 +261,19 @@ def avg_Heatcap_helper(beta_0):
     return result/run_number
 
 
-def avg_Heatcap():
+def avg_Heatcap(N):
     h_0 = 0.3
     omega_0 = 0.02
-    r = 20 # Need to check if r=10 and r=20 are equal
+    r = 12 # Need to check if r=10 and r=20 are equal. It seems so. Perhaps use r=12, just to be sure
     epsilon = 0.2 # Not sure what best value is.
-    N = 50
-    run_number = 200
-    dt = 4
+    run_number = 20 # 200 is actually quite reasonable already, perhaps 400 or 500 is final goal?
+    dt = 4 # use 2,3 or 4?
 
-    transition_estimate = 2.1
+    transition_estimate = 2.1 # This depends on h_0 and omega_0
     end = 3.8
 
     # making a beta array with different densities around the transition temp
-    beta_density_low = 10
+    beta_density_low = 10 # probably use 20 and 50 to get a total of 130 datapoints
     beta_density_high = 25
     beta_arr = np.append(np.append(np.linspace(0,transition_estimate-0.5, num=int(1.5*beta_density_low),
                                                endpoint=False),
@@ -287,10 +285,12 @@ def avg_Heatcap():
 
     # performing the calculation in parallel, will need lots of repeats unfortunately
     result_arr = np.empty_like(beta_arr)
-    with concurrent.futures.ProcessPoolExecutor(max_workers=5) as executor:
-        results = executor.map(avg_Heatcap_helper, beta_arr)
+    with concurrent.futures.ProcessPoolExecutor(max_workers=5) as executor: # max_workers says how many cpu's to use,
+        # make sure to remove when using cluster
+        results = executor.map(avg_Heatcap_helper, beta_arr, repeat(N))
         for i,result in enumerate(results):
             result_arr[i] = result
+            print(i) # So we know how far along we are
 
     filename = f'Heatcap_N_{N}_r_{r}'
     np.save(filename+'.npy', np.matrix([beta_arr, result_arr]))
@@ -310,7 +310,7 @@ def avg_Heatcap():
 
 def main():
     # average_magnetization()
-    avg_Heatcap()
+    avg_Heatcap(10) ## When using cluster, probably make avg_Heatcap(N), and run for all desired N
 
 if __name__ == '__main__':
     main()

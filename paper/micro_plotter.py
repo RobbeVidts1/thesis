@@ -74,7 +74,7 @@ def average_magnetization_plot():
 
 def heatcap_plot():
     data = np.load("Heatcap_N_50_r_10.npy")
-    data_2 = np.load("Heatcap_N_50_r_20.npy")
+    # data_2 = np.load("Heatcap_N_50_r_20.npy")
 
     dpi_set = 200.0
     figsize_set = [6.4, 4.8]
@@ -92,7 +92,7 @@ def heatcap_plot():
 
     fig, ax = plt.subplots(figsize=figsize_set, dpi=dpi_set, layout='constrained')
     ax.plot(data[0], data[1])
-    ax.plot(data_2[0], data_2[1])
+    # ax.plot(data_2[0], data_2[1])
 
     plt.show()
 
