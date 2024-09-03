@@ -2,8 +2,9 @@ import numpy as np
 import random
 from numba import jit
 import matplotlib.pyplot as plt
-from matplotlib.collections import LineCollection
 import time
+import concurrent.futures
+from itertools import repeat
 
 
 # I will assume J = nu = 1
@@ -111,6 +112,21 @@ def write_expl_avg_m(omega_0, h_0, beta_0, N, run_number, dt, init_time, name):
     )
     file.close()
 
+
+def write_expl_avg_Heatcap(h_0, omega_0, r, N, run_number, dt, name):
+    file=open(name, 'w')
+    file.write("This data has the average heat capacity for a finite system for a set of beta's\n"
+               "data[0] is the beta_array\n"
+               "data[1] is the heatcap_array\n"
+               "variables are:\n"
+               f"omega_0 = {str(omega_0)}\n"
+               f"h_0 = {str(h_0)}\n"
+               f"timestep = 1/{str(dt)}N\n"
+               f"r = {str(r)}\n"
+               f"N = {str(N)}"
+               f"run_number = {str(run_number)}")
+
+
 ########################################################################
 ######### Here are the specific examples worked out
 #######################################################################
@@ -174,9 +190,127 @@ def average_magnetization():
     write_expl_avg_m(omega_0, h_0, beta_0, N, run_number, dt, init_time, name)
 
 
-def main():
-    average_magnetization()
+def Heatcap(h_0, omega_0, beta_0, r, epsilon, N, dt_int):
+    """
+    Calculates the heat capacity of a single run given a set of data
+    :param h_0:
+    :param omega_0:
+    :param beta_0:
+    :param r:
+    :param epsilon:
+    :param N:
+    :return:
+    """
+    # additional parameters
+    dt = 1/(dt_int*N)
+    init_time = 1.0
+    exp_time = 1.0 # possibililty to increase exp time to have a smaller fraction of total time be initializing
+    # (with 1-1), it's 10 percent
+    omega_beta = omega_0/r
 
+    time_arr = np.arange(start=-(2 * np.pi * init_time / omega_0), stop=2 * np.pi * exp_time / omega_beta, step=dt)
+    beta_arr = beta_0 * (1+epsilon*np.sin(omega_beta*time_arr))
+    field_arr = h_0 * np.sin(omega_0 * time_arr)
+
+    # fiding the step numbers
+    total_steps = len(time_arr)
+    init_steps = total_steps // (r+1) - 10 ## making a guess to make the while loop short
+    while time_arr[init_steps + 1] < 0:
+        init_steps += 1
+    exp_steps = total_steps - init_steps
+
+    J = np.empty(exp_steps)
+    J_base = np.empty_like(J)
+    # solving, but only keeping the magnetization
+
+    m = solver(N, field_arr, beta_arr, time_arr, init_steps, dt, exp_steps)
+    m_0 = solver(N, field_arr, beta_0 * np.ones_like(time_arr), time_arr, init_steps, dt, exp_steps)
+    for i in range(exp_steps):
+        # finding an array of heat currents in the base case and the total case (a[init_step+1] is the first exp result)
+        J[i] = (m[1][i] + m[1][i - 1] + field_arr[init_steps + i] + field_arr[init_steps + i - 1]) / 2 * \
+               (m[1][i] - m[1][i - 1])
+        J_base[i] = (m_0[1][i] + m_0[1][i - 1] + field_arr[init_steps + i] + field_arr[init_steps + i-1]) / 2 * \
+               (m_0[1][i] - m_0[1][i - 1])
+    C = beta_0*np.pi * np.sum(J * np.cos(omega_beta*time_arr[init_steps:])) # there is no dt dependence anymnore,
+                                                            # there is one in the denominator from J and one in the
+                                                            # numerator from the integration
+    return C
+
+
+def avg_Heatcap_helper(beta_0):
+    """
+    This function is a helper function to avoid exceesive repeats in executor.map() which calculates the
+    average heatcap in a single point => Always make sure the variables are the same as in avg_Heatcap
+    :param beta_0:
+    :return:
+    """
+    timer = time.time()
+    h_0 = 0.3
+    omega_0 = 0.02
+    r = 20  # Need to check if r=10 and r=20 are equal
+    epsilon = 0.2  # Not sure what best value is.
+    N = 50
+    dt=4
+
+    run_number = 200
+
+    result = 0
+    for i in range(run_number):
+        result += Heatcap(h_0, omega_0, beta_0, r, epsilon, N, dt)
+
+    print(f'This took {time.time()-timer} seconds')
+    return result/run_number
+
+
+def avg_Heatcap():
+    h_0 = 0.3
+    omega_0 = 0.02
+    r = 20 # Need to check if r=10 and r=20 are equal
+    epsilon = 0.2 # Not sure what best value is.
+    N = 50
+    run_number = 200
+    dt = 4
+
+    transition_estimate = 2.1
+    end = 3.8
+
+    # making a beta array with different densities around the transition temp
+    beta_density_low = 10
+    beta_density_high = 25
+    beta_arr = np.append(np.append(np.linspace(0,transition_estimate-0.5, num=int(1.5*beta_density_low),
+                                               endpoint=False),
+                                   np.linspace(transition_estimate-0.5, transition_estimate+0.5,
+                                               num=beta_density_high, endpoint=False)),
+                         np.linspace(transition_estimate+0.5, end,
+                                     num=int( (end-transition_estimate+0.5) * beta_density_low)))
+    print(f'the total number of datapoints is {len(beta_arr)}')
+
+    # performing the calculation in parallel, will need lots of repeats unfortunately
+    result_arr = np.empty_like(beta_arr)
+    with concurrent.futures.ProcessPoolExecutor(max_workers=5) as executor:
+        results = executor.map(avg_Heatcap_helper, beta_arr)
+        for i,result in enumerate(results):
+            result_arr[i] = result
+
+    filename = f'Heatcap_N_{N}_r_{r}'
+    np.save(filename+'.npy', np.matrix([beta_arr, result_arr]))
+    write_expl_avg_Heatcap(h_0, omega_0, r, N, run_number, dt, filename)
+
+
+    plt.plot(beta_arr, result_arr)
+
+    plt.show()
+
+
+
+
+
+
+
+
+def main():
+    # average_magnetization()
+    avg_Heatcap()
 
 if __name__ == '__main__':
     main()

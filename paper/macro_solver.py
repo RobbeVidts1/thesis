@@ -2,7 +2,6 @@ import numpy as np
 from numba import jit
 import scipy.optimize as opt
 import matplotlib.pyplot as plt
-import multiprocessing
 import concurrent.futures
 
 ################################################################
