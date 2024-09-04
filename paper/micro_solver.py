@@ -1,7 +1,7 @@
 import numpy as np
 import random
 from numba import jit
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import time
 import concurrent.futures
 from itertools import repeat
@@ -131,14 +131,14 @@ def write_expl_avg_Heatcap(h_0, omega_0, r, N, run_number, dt, name):
 ######### Here are the specific examples worked out
 #######################################################################
 
-def Trial():
-    x = solver(40, 0.7, 0.02, 3.0, 0.02, 0, 1.0, 1.0)
-
-    fig1, ax1 = plt.subplots()
-    ax1.plot(x[0], x[1])
-    fig2, ax2 = plt.subplots()
-    ax2.plot(x[0],x[2])
-    plt.show()
+# def Trial():
+#     x = solver(40, 0.7, 0.02, 3.0, 0.02, 0, 1.0, 1.0)
+#
+#     fig1, ax1 = plt.subplots()
+#     ax1.plot(x[0], x[1])
+#     fig2, ax2 = plt.subplots()
+#     ax2.plot(x[0],x[2])
+#     plt.show()
 
 
 def average_magnetization():
@@ -292,7 +292,7 @@ def avg_Heatcap(N):
             result_arr[i] = result
             print(i) # So we know how far along we are
 
-    filename = f'Heatcap_N_{N}_r_{r}'
+    filename = f'Heatcap_N_{N}_r_{r}_v2'
     np.save(filename+'.npy', np.matrix([beta_arr, result_arr]))
     write_expl_avg_Heatcap(h_0, omega_0, r, N, run_number, dt, filename)
 
@@ -307,10 +307,10 @@ def avg_Heatcap(N):
 
 
 def main():
-    # average_magnetization()
+    average_magnetization()
     # avg_Heatcap(50) ## When using cluster, probably make avg_Heatcap(N), and run for all desired N
-    avg_Heatcap(100)
-    avg_Heatcap(250)
+    # avg_Heatcap(100)
+    # avg_Heatcap(250)
 
 if __name__ == '__main__':
     main()

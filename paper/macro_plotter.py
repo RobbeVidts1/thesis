@@ -2,7 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from basic_units import radians
 
-from paper.macro_solver import HeatCap_unbounded
 
 # plt.rcParams['text.usetex'] = True
 
@@ -20,32 +19,35 @@ def first_hyst_fig_plot():
     beta_0 = np.array([1.8, 2.1, 2.2, 2.5])
 
     ## I have to put time still in units of radians
-    time=data[0] * omega_0 * radians
+    time = data[0] * omega_0 * radians
+    h_t = h_0*np.sin(data[0]*omega_0)
 
     # Setting lay-out variables
-    dpi_set = 100.0
+    dpi_set = 200.0
     figsize_set = [6.4,4.8]
     plt.rcParams.update({
-        "axes.labelsize": 15,    #size of labels
+        "axes.labelsize": 15, #size of labels
+        "axes.linewidth": 1.2,
         "grid.alpha": .5,       #visibility of grid
         "grid.color": "grey",
         "grid.linestyle": "-",
         "grid.linewidth": .4,
         "legend.fontsize": 15,
-        "lines.linewidth": 1,
+        "lines.linewidth": 2,
         "xtick.labelsize": 15,  #size of ticks
-        "ytick.labelsize": 15
+        "ytick.labelsize": 15,
     })
 
     fig, ax=plt.subplots(figsize=figsize_set, dpi=dpi_set, layout='constrained')
             ## use larger dpi when making final figure ?
-    ax.plot(time, data[1], xunits=radians, label=r"$\beta_0 = $" + str(beta_0[0]))
-    ax.plot(time, data[2], xunits=radians, label=r"$\beta_0 = $" + str(beta_0[1]))
-    ax.plot(time, data[3], xunits=radians, label=r"$\beta_0 = $" + str(beta_0[2]))
-    ax.plot(time, data[4], xunits=radians, label=r"$\beta_0 = $" + str(beta_0[3]))
+    ax.plot(time, data[1], xunits=radians, label=r"$\beta = $" + str(beta_0[0]))
+    ax.plot(time, data[2], xunits=radians, label=r"$\beta = $" + str(beta_0[1]))
+    ax.plot(time, data[3], xunits=radians, label=r"$\beta = $" + str(beta_0[2]))
+    ax.plot(time, data[4], xunits=radians, label=r"$\beta = $" + str(beta_0[3]))
+    ax.plot(time, h_t, xunits=radians, c='grey', alpha=0.8, ls='--')
 
-    ax.set_xlabel("$\omega_0 t$")
-    ax.set_ylabel("$m$")
+    ax.set_xlabel(r"$\omega_0 t$")
+    ax.set_ylabel("$m_t$")
 
     plt.grid(True)
     ax.legend()
@@ -55,14 +57,14 @@ def first_hyst_fig_plot():
 
     fig_alt, ax_alt = plt.subplots(figsize=figsize_set, dpi=dpi_set, layout='constrained')
             ## use larger dpi when making final figure
-    ax_alt.plot(h_t, data[1], label=r"$\beta_0 = $" + str(beta_0[0]))
-    ax_alt.plot(h_t, data[2], label=r"$\beta_0 = $" + str(beta_0[1]))
-    ax_alt.plot(h_t, data[3], label=r"$\beta_0 = $" + str(beta_0[2]))
-    ax_alt.plot(h_t, data[4], label=r"$\beta_0 = $" + str(beta_0[3]))
+    ax_alt.plot(h_t, data[1], label=r"$\beta = $" + str(beta_0[0]))
+    ax_alt.plot(h_t, data[2], label=r"$\beta = $" + str(beta_0[1]))
+    ax_alt.plot(h_t, data[3], label=r"$\beta = $" + str(beta_0[2]))
+    ax_alt.plot(h_t, data[4], label=r"$\beta = $" + str(beta_0[3]))
 
 
-    ax_alt.set_xlabel("$h(t)$")
-    ax_alt.set_ylabel("$m(t)$")
+    ax_alt.set_xlabel("$h_t$")
+    ax_alt.set_ylabel("$m_t$")
 
     plt.grid(True)
     ax_alt.legend()
@@ -90,18 +92,19 @@ def infl_omega_0_plot():
     beta_0_cold = 2
 
     # Setting lay-out variables
-    dpi_set = 100.0
+    dpi_set = 200.0
     figsize_set = [6.4,4.8]
     plt.rcParams.update({
-        "axes.labelsize": 15,    #size of labels
+        "axes.labelsize": 15, #size of labels
+        "axes.linewidth": 1.2,
         "grid.alpha": .5,       #visibility of grid
         "grid.color": "grey",
         "grid.linestyle": "-",
         "grid.linewidth": .4,
-        "legend.fontsize": 15,
-        "lines.linewidth": 1,
+        "legend.fontsize": 12,
+        "lines.linewidth": 2,
         "xtick.labelsize": 15,  #size of ticks
-        "ytick.labelsize": 15
+        "ytick.labelsize": 15,
     })
 
     ## Here comes the parametrized version of the plot
@@ -115,11 +118,11 @@ def infl_omega_0_plot():
 
     ax_alt_warm.plot(stat_data[0], stat_data[1], label="stationary solution")
 
-    ax_alt_warm.set_xlabel("$h(t)$")
-    ax_alt_warm.set_ylabel("$m(t)$")
+    ax_alt_warm.set_xlabel("$h_t$")
+    ax_alt_warm.set_ylabel("$m_t$")
 
     plt.grid(True)
-    ax_alt_warm.legend()
+    ax_alt_warm.legend(loc="upper left")
 
     #cold
     dataset = np.load("infl_omega_0_cold.npz")
@@ -134,19 +137,19 @@ def infl_omega_0_plot():
     beta_0_cold = 2
 
     # Setting lay-out variables
-    dpi_set = 100.0
+    dpi_set = 200.0
     figsize_set = [6.4,4.8]
     plt.rcParams.update({
-        "axes.labelsize": 15,    #size of labels
+        "axes.labelsize": 15, #size of labels
+        "axes.linewidth": 1.2,
         "grid.alpha": .5,       #visibility of grid
         "grid.color": "grey",
         "grid.linestyle": "-",
         "grid.linewidth": .4,
-        "legend.fontsize": 15,
-        "legend.loc": "upper left",
-        "lines.linewidth": 1,
+        "legend.fontsize": 12,
+        "lines.linewidth": 2,
         "xtick.labelsize": 15,  #size of ticks
-        "ytick.labelsize": 15
+        "ytick.labelsize": 15,
     })
 
     ## Here comes the parametrized version of the plot
@@ -164,7 +167,7 @@ def infl_omega_0_plot():
     ax_alt_cold.set_ylabel("$m_t$")
 
     plt.grid(True)
-    ax_alt_cold.legend()
+    ax_alt_cold.legend(loc="upper left")
 
 
     plt.show()
@@ -182,16 +185,16 @@ def unbounded_heatcap_plot():
     dpi_set = 100.0
     figsize_set = [6.4,4.8]
     plt.rcParams.update({
-        "axes.labelsize": 15,    #size of labels
+        "axes.labelsize": 15, #size of labels
+        "axes.linewidth": 1.2,
         "grid.alpha": .5,       #visibility of grid
         "grid.color": "grey",
         "grid.linestyle": "-",
         "grid.linewidth": .4,
         "legend.fontsize": 15,
-        "legend.loc": "upper left",
-        "lines.linewidth": 1.5,
+        "lines.linewidth": 2,
         "xtick.labelsize": 15,  #size of ticks
-        "ytick.labelsize": 15
+        "ytick.labelsize": 15,
     })
 
     # plotting
@@ -217,8 +220,8 @@ def unbounded_heatcap_plot():
 
 def main():
     # first_hyst_fig_plot()
-    # infl_omega_0_plot()
-    unbounded_heatcap_plot()
+    infl_omega_0_plot()
+    # unbounded_heatcap_plot()
 
 if __name__ == '__main__':
     main()

@@ -2,7 +2,7 @@ import numpy as np
 import random
 from numba import jit
 import matplotlib.pyplot as plt
-from basic_units import radians
+# from basic_units import radians
 
 from micro_solver import average_magnetization
 
@@ -73,8 +73,8 @@ def average_magnetization_plot():
 
 
 def heatcap_plot():
-    data = np.load("Heatcap_N_50_r_10.npy")
-    # data_2 = np.load("Heatcap_N_50_r_20.npy")
+    data = np.load("Heatcap_N_100_r_15.npy")
+    data_2 = np.load("Heatcap_N_250_r_15.npy")
 
     dpi_set = 200.0
     figsize_set = [6.4, 4.8]
@@ -91,8 +91,11 @@ def heatcap_plot():
     })
 
     fig, ax = plt.subplots(figsize=figsize_set, dpi=dpi_set, layout='constrained')
-    ax.plot(data[0], data[1])
-    # ax.plot(data_2[0], data_2[1])
+    ax.plot(data[0], data[1], label=r'$N=100$')
+    ax.plot(data_2[0], data_2[1], label=r'$N=250$')
+
+    plt.grid(True)
+    plt.legend(loc='lower right')
 
     plt.show()
 
@@ -100,8 +103,8 @@ def heatcap_plot():
 
 
 def main():
-    # average_magnetization_plot()
-    heatcap_plot()
+    average_magnetization_plot()
+    # heatcap_plot()
 
 if __name__ == '__main__':
     main()
