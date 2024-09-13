@@ -1,7 +1,7 @@
 import numpy as np
 import random
 from numba import jit
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import time
 import concurrent.futures
 from itertools import repeat
@@ -131,23 +131,23 @@ def write_expl_avg_Heatcap(h_0, omega_0, r, N, run_number, dt, name):
 ######### Here are the specific examples worked out
 #######################################################################
 
-# def Trial():
-#     x = solver(40, 0.7, 0.02, 3.0, 0.02, 0, 1.0, 1.0)
-#
-#     fig1, ax1 = plt.subplots()
-#     ax1.plot(x[0], x[1])
-#     fig2, ax2 = plt.subplots()
-#     ax2.plot(x[0],x[2])
-#     plt.show()
+def Trial():
+    x = solver(40, 0.7, 0.02, 3.0, 0.02, 0, 1.0, 1.0)
+
+    fig1, ax1 = plt.subplots()
+    ax1.plot(x[0], x[1])
+    fig2, ax2 = plt.subplots()
+    ax2.plot(x[0],x[2])
+    plt.show()
 
 
-def average_magnetization():
+def average_magnetization(): 
     # physical parameters
-    N = 100
+    N = 250
 
     h_0 = 0.3
     omega_0 = 0.02
-    beta_0 = 1.5
+    beta_0 = 1.2
     # compute parameters
     exp_time = 1
     init_time = 1
@@ -173,21 +173,28 @@ def average_magnetization():
 
     avg_m = np.zeros((4, exp_steps))
 
-    for run in range(run_number):
-        run_result = solver(N, field_arr, beta_arr, time_arr, init_steps, dt, exp_steps)
-        avg_m[2] += run_result[1]
-        avg_m[3] += run_result[1]**2
+    with concurrent.futures.ProcessPoolExecutor(max_workers=5) as executor:
+        # make sure to remove when using cluster
+        func_list = {executor.submit(solver, N, field_arr, beta_arr, time_arr, init_steps, dt, exp_steps)
+                for i in range(run_number)}
+
+        for func in concurrent.futures.as_completed(func_list):
+            avg_m[2] += func.result()[1]
+            avg_m[3] += func.result()[1] ** 2
+
 
     avg_m[2] /= run_number
     avg_m[3] /= run_number
+    avg_m[0] = solver(N, field_arr, beta_arr, time_arr, init_steps, dt, exp_steps)[0]
 
-    avg_m[0] = run_result[0]
     avg_m[1] = field_arr[init_steps:]
 
     name = "avg_m_" + str(N)
 
     np.save(name, avg_m)
     write_expl_avg_m(omega_0, h_0, beta_0, N, run_number, dt, init_time, name)
+    plt.plot(avg_m[0], avg_m[2])
+    plt.show()
 
 
 def Heatcap(h_0, omega_0, beta_0, r, epsilon, N, dt_int):
@@ -247,11 +254,11 @@ def avg_Heatcap_helper(beta_0, N):
     timer = time.time()
     h_0 = 0.3
     omega_0 = 0.02
-    r = 15  # Need to check if r=10 and r=20 are equal
+    r = 12  # Need to check if r=10 and r=20 are equal
     epsilon = 0.2  # Not sure what best value is.
-    dt = 4
+    dt=4
 
-    run_number = 500
+    run_number = 200
 
     result = 0
     for i in range(run_number):
@@ -264,37 +271,42 @@ def avg_Heatcap_helper(beta_0, N):
 def avg_Heatcap(N):
     h_0 = 0.3
     omega_0 = 0.02
-    r = 15 # Need to check if r=10 and r=20 are equal. It seems so. Perhaps use r=12, just to be sure
+    r = 12 # Need to check if r=10 and r=20 are equal. It seems so. Perhaps use r=12, just to be sure
     epsilon = 0.2 # Not sure what best value is.
-    run_number = 500 # 200 is actually quite reasonable already, perhaps 400 or 500 is final goal?
+    run_number = 20 # 200 is actually quite reasonable already, perhaps 400 or 500 is final goal?
     dt = 4 # use 2,3 or 4?
 
     transition_estimate = 2.1 # This depends on h_0 and omega_0
     end = 3.8
 
     # making a beta array with different densities around the transition temp
-    beta_density_low = 20 # probably use 20 and 50 to get a total of 130 datapoints
-    beta_density_high = 50
-    beta_arr = np.append(np.append(np.linspace(0, transition_estimate-0.5, num=int(1.5*beta_density_low), #low density
+    beta_density_low = 10 # probably use 20 and 50 to get a total of 130 datapoints
+    beta_density_high = 25
+    beta_arr = np.append(np.append(np.linspace(0,transition_estimate-0.5, num=int(1.5*beta_density_low),
                                                endpoint=False),
-                                   np.linspace(transition_estimate-0.5, transition_estimate+0.5, #high density
+                                   np.linspace(transition_estimate-0.5, transition_estimate+0.5,
                                                num=beta_density_high, endpoint=False)),
                          np.linspace(transition_estimate+0.5, end,
-                                     num=int((end-transition_estimate+0.5) * beta_density_low))) #low density
-    # print(f'the total number of datapoints is {len(beta_arr)}')
+                                     num=int( (end-transition_estimate+0.5) * beta_density_low)))
+    print(f'the total number of datapoints is {len(beta_arr)}')
 
     # performing the calculation in parallel, will need lots of repeats unfortunately
     result_arr = np.empty_like(beta_arr)
-    with concurrent.futures.ProcessPoolExecutor() as executor: # max_workers says how many cpu's to use,
+    with concurrent.futures.ProcessPoolExecutor(max_workers=5) as executor: # max_workers says how many cpu's to use,
         # make sure to remove when using cluster
         results = executor.map(avg_Heatcap_helper, beta_arr, repeat(N))
-        for i, result in enumerate(results):
+        for i,result in enumerate(results):
             result_arr[i] = result
             print(i) # So we know how far along we are
 
-    filename = f'Heatcap_N_{N}_r_{r}_v2'
+    filename = f'Heatcap_N_{N}_r_{r}'
     np.save(filename+'.npy', np.matrix([beta_arr, result_arr]))
     write_expl_avg_Heatcap(h_0, omega_0, r, N, run_number, dt, filename)
+
+
+    plt.plot(beta_arr, result_arr)
+
+    plt.show()
 
 
 
@@ -308,9 +320,7 @@ def avg_Heatcap(N):
 
 def main():
     average_magnetization()
-    # avg_Heatcap(50) ## When using cluster, probably make avg_Heatcap(N), and run for all desired N
-    # avg_Heatcap(100)
-    # avg_Heatcap(250)
+    # avg_Heatcap(10) ## When using cluster, probably make avg_Heatcap(N), and run for all desired N
 
 if __name__ == '__main__':
     main()
