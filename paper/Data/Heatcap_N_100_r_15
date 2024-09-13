@@ -6,4 +6,5 @@ omega_0 = 0.02
 h_0 = 0.3
 timestep = 1/4N
 r = 15
-N = 100run_number = 500
+N = 100
+run_number = 500
